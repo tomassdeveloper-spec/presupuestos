@@ -86,12 +86,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        setLoading(true);
+        // Actualizamos el perfil de forma silenciosa en segundo plano sin interrumpir la experiencia de usuario
         await fetchProfile(session.user.id);
-        setLoading(false);
       } else {
         setProfile(null);
-        setLoading(false);
       }
     });
 
