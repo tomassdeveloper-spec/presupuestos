@@ -738,30 +738,47 @@ a {
 
 /* --- PRINT RULES --- */
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  .pdf-preview-container, .pdf-preview-container * {
-    visibility: visible;
-  }
-  .pdf-preview-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-    background: transparent;
-    border: none;
-  }
-  .a4-sheet {
-    box-shadow: none;
-    margin: 0;
-    padding: 0;
-    width: 210mm;
-    min-height: 297mm;
-  }
-  .no-print {
+  /* Ocultar barra lateral, cabeceras y elementos marcados con no-print */
+  .sidebar, .mobile-header, .page-header, .no-print, nav, header, .sidebar-overlay {
     display: none !important;
+  }
+
+  /* Ajustar contenedores principales para impresión a página completa */
+  body, html, .app-container, .main-content {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+  }
+
+  /* Ocultar todo lo que no sea el contenedor del PDF dentro del contenido principal */
+  .main-content > :not(.pdf-preview-container) {
+    display: none !important;
+  }
+
+  .pdf-preview-container {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .a4-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    color: #1a1a1a !important;
   }
 }
 
