@@ -796,6 +796,16 @@ a {
   .hide-on-mobile {
     display: none !important;
   }
+  /* Truco para mantener el PDF renderizado en el DOM de móvil para que html2canvas pueda capturarlo */
+  .pdf-preview-container.hide-on-mobile {
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 210mm !important;
+    display: block !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
   .show-on-mobile {
     display: block !important;
   }

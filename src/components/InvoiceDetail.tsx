@@ -9,7 +9,10 @@ import {
   AlertCircle,
   Briefcase,
   User,
+  Download,
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface InvoiceDetailProps {
   setCurrentView: (view: string) => void;
@@ -27,6 +30,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'summary' | 'a4'>('summary');
+  const [downloading, setDownloading] = useState(false);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -59,8 +63,64 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     fetchInvoiceDetails();
   }, [selectedInvoiceId, user]);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('invoice-sheet-a4');
+    if (!element) {
+      showNotification('error', 'No se encontró la hoja del documento.');
+      return;
+    }
+
+    setDownloading(true);
+    showNotification('success', 'Generando PDF de alta calidad, espera un momento...');
+
+    try {
+      // Esperar brevemente para asegurar que los estilos y fuentes se apliquen bien
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const canvas = await html2canvas(element, {
+        scale: 2.5, // Alta densidad de píxeles para máxima nitidez
+        useCORS: true, // Permitir imágenes CORS
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 1024, // Forzar ancho de renderizado estable
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Crear documento PDF en formato A4 (210mm x 297mm)
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Primera página
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // Páginas adicionales si el documento es muy largo
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const fileName = `Presupuesto_${invoice?.number || 'documento'}.pdf`;
+      pdf.save(fileName);
+      showNotification('success', '¡PDF generado y descargado correctamente!');
+    } catch (err) {
+      console.error('Error al generar PDF con jsPDF:', err);
+      showNotification('error', 'Hubo un error al compilar el PDF. Inténtalo de nuevo.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handleEdit = () => {
@@ -161,9 +221,22 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
             <Edit2 size={18} />
             Editar
           </button>
-          <button onClick={handlePrint} className="btn btn-primary">
-            <Printer size={18} />
-            Imprimir / PDF
+          <button onClick={handleDownloadPDF} className="btn btn-primary" disabled={downloading}>
+            {downloading ? (
+              <div
+                style={{
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  width: '16px',
+                  height: '16px',
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
+            ) : (
+              <Download size={18} />
+            )}
+            {downloading ? 'Generando...' : 'Descargar PDF'}
           </button>
         </div>
       </div>
