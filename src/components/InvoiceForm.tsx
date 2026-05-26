@@ -16,8 +16,8 @@ import {
 
 interface InvoiceItem {
   description: string;
-  quantity: number;
-  unit_price: number;
+  quantity: string | number;
+  unit_price: string | number;
   total: number;
 }
 
@@ -26,6 +26,26 @@ interface InvoiceFormProps {
   setCurrentView: (view: string) => void;
   selectedInvoiceId: string | null;
 }
+
+// Auxiliares para manejo de decimales en dispositivos móviles (comas/puntos)
+const parseLocaleFloat = (val: any): number => {
+  if (val === undefined || val === null || val === '') return 0;
+  const str = String(val).replace(',', '.');
+  const parsed = parseFloat(str);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+const sanitizeDecimalInput = (value: string): string => {
+  // Permitir números y un único separador decimal (punto o coma)
+  let sanitized = value.replace(/[^0-9.,]/g, '');
+  const firstSeparatorIndex = sanitized.search(/[.,]/);
+  if (firstSeparatorIndex !== -1) {
+    const prefix = sanitized.slice(0, firstSeparatorIndex + 1);
+    const suffix = sanitized.slice(firstSeparatorIndex + 1).replace(/[.,]/g, '');
+    sanitized = prefix + suffix;
+  }
+  return sanitized;
+};
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   currentView,
@@ -53,7 +73,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
   // Conceptos / Items
   const [items, setItems] = useState<InvoiceItem[]>([
-    { description: '', quantity: 1, unit_price: 0, total: 0 },
+    { description: '', quantity: '1', unit_price: '0', total: 0 },
   ]);
 
   // Tasas e Impuestos
@@ -185,7 +205,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   useEffect(() => {
     let sub = 0;
     const updatedItems = items.map((item) => {
-      const lineTotal = Number((item.quantity * item.unit_price).toFixed(2));
+      const qty = parseLocaleFloat(item.quantity);
+      const price = parseLocaleFloat(item.unit_price);
+      const lineTotal = Number((qty * price).toFixed(2));
       sub += lineTotal;
       return { ...item, total: lineTotal };
     });
@@ -217,9 +239,9 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const handleItemChange = (index: number, field: keyof InvoiceItem, value: any) => {
     const newItems = [...items];
     if (field === 'quantity') {
-      newItems[index].quantity = Number(value);
+      newItems[index].quantity = sanitizeDecimalInput(String(value));
     } else if (field === 'unit_price') {
-      newItems[index].unit_price = Number(value);
+      newItems[index].unit_price = sanitizeDecimalInput(String(value));
     } else if (field === 'description') {
       newItems[index].description = String(value);
     }
@@ -227,7 +249,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   };
 
   const addItemRow = () => {
-    setItems([...items, { description: '', quantity: 1, unit_price: 0, total: 0 }]);
+    setItems([...items, { description: '', quantity: '1', unit_price: '0', total: 0 }]);
   };
 
   const removeItemRow = (index: number) => {
@@ -243,7 +265,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     e.preventDefault();
     if (!user) return;
 
-    const invalidItem = items.some((i) => i.description.trim() === '' || i.quantity <= 0);
+    const invalidItem = items.some((i) => i.description.trim() === '' || parseLocaleFloat(i.quantity) <= 0);
     if (invalidItem) {
       showNotification('error', 'Completa la descripción y cantidad de todos los conceptos.');
       return;
@@ -268,7 +290,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       irpf_amount: applyIrpf ? irpfAmount : 0,
       total,
       notes,
-      items,
+      items: items.map((item) => ({
+        description: item.description,
+        quantity: parseLocaleFloat(item.quantity),
+        unit_price: parseLocaleFloat(item.unit_price),
+        total: item.total,
+      })),
       type: 'presupuesto', // Compatibilidad con bases de datos que aún tienen la columna NOT NULL
       due_date: docDate,    // Compatibilidad con bases de datos que aún tienen la columna due_date NOT NULL
     };
@@ -599,22 +626,20 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     </td>
                     <td>
                       <input
-                        type="number"
-                        step="any"
+                        type="text"
+                        inputMode="decimal"
                         className="form-control text-center"
                         value={item.quantity}
-                        min="0.01"
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                         required
                       />
                     </td>
                     <td>
                       <input
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         className="form-control text-right"
                         value={item.unit_price}
-                        min="0"
                         onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                         required
                       />
@@ -671,11 +696,10 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" style={{ textAlign: 'left' }}>Cantidad</label>
                     <input
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       className="form-control text-center"
                       value={item.quantity}
-                      min="0.01"
                       onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                       required
                     />
@@ -684,11 +708,10 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" style={{ textAlign: 'right' }}>Precio Unit. (€)</label>
                     <input
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       className="form-control text-right"
                       value={item.unit_price}
-                      min="0"
                       onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                       required
                     />
