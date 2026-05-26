@@ -119,7 +119,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
       }
     };
     fetchClients();
-  }, [user]);
+  }, [user?.id]);
 
   // Cargar datos si estamos en modo Edición
   useEffect(() => {
@@ -163,7 +163,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     };
 
     fetchInvoiceDetails();
-  }, [selectedInvoiceId, isEditMode, user]);
+  }, [selectedInvoiceId, isEditMode, user?.id]);
 
   // Auto-generar número correlativo sugerido para nuevos presupuestos
   useEffect(() => {
@@ -199,7 +199,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
     };
 
     generateSuggestedNumber();
-  }, [isEditMode, user]);
+  }, [isEditMode, user?.id]);
 
   // Recalcular Subtotales e Impuestos
   useEffect(() => {

@@ -84,7 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
 
     fetchDashboardData();
-  }, [user]);
+  }, [user?.id]);
 
   const handleQuickCreate = () => {
     setCurrentView('invoice-form-new');

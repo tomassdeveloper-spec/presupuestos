@@ -57,7 +57,7 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({
 
   useEffect(() => {
     fetchDocuments();
-  }, [user]);
+  }, [user?.id]);
 
   // Aplicar filtros y búsqueda
   useEffect(() => {

@@ -60,7 +60,7 @@ export const InvoiceDetail: React.FC<InvoiceDetailProps> = ({
     };
 
     fetchInvoiceDetails();
-  }, [selectedInvoiceId, user]);
+  }, [selectedInvoiceId, user?.id]);
 
   const handleDownloadPDF = async () => {
     const element = document.getElementById('invoice-sheet-a4');
