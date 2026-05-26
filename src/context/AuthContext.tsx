@@ -68,33 +68,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // 1. Cargar el perfil de la empresa de forma aislada y desacoplada del flujo de auth para evitar deadlocks de Web Locks en Supabase
   useEffect(() => {
-    // 1. Obtener sesión activa al cargar
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).then(() => setLoading(false));
-      } else {
+    if (user) {
+      fetchProfile(user.id);
+    } else {
+      setProfile(null);
+    }
+  }, [user?.id]);
+
+  // 2. Controlar la inicialización de la sesión y escuchar eventos de cambio de auth
+  useEffect(() => {
+    let active = true;
+
+    // Fallback de seguridad: forzar la desactivación del loader principal a los 5 segundos si algo en la red se atasca
+    const fallbackTimer = setTimeout(() => {
+      if (active) {
+        console.warn('Carga de sesión atascada. Desactivando loader por fallback de seguridad.');
         setLoading(false);
       }
-    });
+    }, 5000);
 
-    // 2. Suscribirse a cambios de estado de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: any, session: Session | null) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Obtener la sesión inicial de forma segura
+    try {
+      supabase.auth.getSession()
+        .then(({ data: { session } }: any) => {
+          if (!active) return;
+          setSession(session);
+          setUser(session?.user ?? null);
+          clearTimeout(fallbackTimer);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('Error al obtener la sesión inicial:', err);
+          if (active) {
+            clearTimeout(fallbackTimer);
+            setLoading(false);
+          }
+        });
+    } catch (err) {
+      console.error('Excepción al obtener la sesión:', err);
+      clearTimeout(fallbackTimer);
+      setLoading(false);
+    }
 
-      if (session?.user) {
-        // Actualizamos el perfil de forma silenciosa en segundo plano sin interrumpir la experiencia de usuario
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-    });
+    // Suscribirse a cambios de estado de autenticación (completamente síncrono para evitar deadlocks en el cliente de Supabase)
+    let subscription: any = null;
+    try {
+      const res = supabase.auth.onAuthStateChange((_event: any, session: Session | null) => {
+        if (!active) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+      });
+      subscription = res.data?.subscription;
+    } catch (err) {
+      console.error('Error al suscribirse a onAuthStateChange:', err);
+    }
 
     return () => {
-      subscription.unsubscribe();
+      active = false;
+      clearTimeout(fallbackTimer);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 
